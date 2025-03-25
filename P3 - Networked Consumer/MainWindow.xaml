@@ -1,12 +1,20 @@
-﻿<Window x:Class="P3___Networked_Consumer.MainWindow"
+﻿<Window x:Class="VideoUploader.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:P3___Networked_Consumer"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="Video Receiver" Height="600" Width="950"
+        Background="White">
 
-    </Grid>
+	<Grid>
+		<!-- Upload Button -->
+		<DockPanel LastChildFill="True">
+			<Button Content="Upload Videos" Height="40" DockPanel.Dock="Top"
+                    Click="UploadButton_Click" Background="Red" Foreground="White"
+                    FontWeight="Bold" Margin="10"/>
+
+			<!-- Video Gallery -->
+			<ScrollViewer VerticalScrollBarVisibility="Auto">
+				<WrapPanel Name="VideoGallery" Margin="10"/>
+			</ScrollViewer>
+		</DockPanel>
+	</Grid>
 </Window>

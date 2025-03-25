@@ -10,7 +10,7 @@ namespace NetworkedConsumer
     public partial class MainWindow : Window
     {
         private HashSet<string> folderPaths = new HashSet<string>();
-        private readonly HashSet<string> allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp4", ".mkv", ".avi" };
+        private readonly HashSet<string> allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".mp4", ".mkv", ".avi", ".mov", ".wmv" };
 
         public MainWindow()
         {

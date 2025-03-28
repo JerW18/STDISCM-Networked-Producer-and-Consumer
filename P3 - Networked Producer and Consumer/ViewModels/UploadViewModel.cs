@@ -10,11 +10,11 @@ namespace P3___Networked_Producer.ViewModels
 {
     public partial class UploadViewModel : ObservableObject
     {
-        private readonly HashSet<string> videoPaths = new HashSet<string>();
-        private readonly HashSet<string> allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        private readonly HashSet<string> videoPaths = new();
+        private readonly HashSet<string> allowedExtensions = new(StringComparer.OrdinalIgnoreCase)
             { ".mp4", ".mkv", ".avi", ".mov", ".wmv" };
 
-        public ObservableCollection<VideoFileItem> VideoFiles { get; } = new ObservableCollection<VideoFileItem>();
+        public ObservableCollection<VideoFileItem> VideoFiles { get; } = [];
 
         public UploadViewModel() {}
 

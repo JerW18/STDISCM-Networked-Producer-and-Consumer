@@ -1,17 +1,14 @@
-﻿using System;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Windows;
-using System.Windows.Input;
-using GalaSoft.MvvmLight.Command;
-using MvvmHelpers;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using P3___Networked_Producer.Models;
 using P3___Networked_Producer.Views;
 
 namespace P3___Networked_Producer.ViewModels
 {
-    public class UploadViewModel : BaseViewModel
+    public partial class UploadViewModel : ObservableObject
     {
         private readonly HashSet<string> videoPaths = new HashSet<string>();
         private readonly HashSet<string> allowedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -19,16 +16,7 @@ namespace P3___Networked_Producer.ViewModels
 
         public ObservableCollection<VideoFileItem> VideoFiles { get; } = new ObservableCollection<VideoFileItem>();
 
-        public ICommand UploadCommand { get; }
-        public ICommand NavigateToProgressCommand { get; }
-        public ICommand DeleteVideoCommand { get; }
-
-        public UploadViewModel()
-        {
-            UploadCommand = new RelayCommand(UploadVideos, CanUpload);
-            NavigateToProgressCommand = new RelayCommand(NavigateToProgress);
-            DeleteVideoCommand = new RelayCommand<VideoFileItem>(DeleteVideo);
-        }
+        public UploadViewModel() {}
 
         public bool CanAcceptDrag(System.Windows.DragEventArgs e)
         {
@@ -46,7 +34,7 @@ namespace P3___Networked_Producer.ViewModels
             {
                 string[] paths = (string[])e.Data.GetData(DataFormats.FileDrop);
                 HandleDrop(paths);
-                (UploadCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                UploadVideosCommand.NotifyCanExecuteChanged();
             }
         }
 
@@ -89,13 +77,15 @@ namespace P3___Networked_Producer.ViewModels
             }
         }
 
+        private bool CanUpload() => videoPaths.Count > 0;
+
+        [RelayCommand(CanExecute = nameof(CanUpload))]
         private void UploadVideos()
         {
             MessageBox.Show($"Uploading {videoPaths.Count} video(s)...", "Upload", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        private bool CanUpload() => videoPaths.Count > 0;
-
+        [RelayCommand]
         private void NavigateToProgress()
         {
             if (Application.Current.MainWindow is MainWindow mainWindow)
@@ -108,13 +98,14 @@ namespace P3___Networked_Producer.ViewModels
             }
         }
 
+        [RelayCommand]
         private void DeleteVideo(VideoFileItem video)
         {
             if (video != null)
             {
                 videoPaths.Remove(video.FilePath);
                 VideoFiles.Remove(video);
-                (UploadCommand as RelayCommand)?.RaiseCanExecuteChanged();
+                UploadVideosCommand.NotifyCanExecuteChanged();
             }
         }
     }

@@ -8,7 +8,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 
-namespace VideoUploader
+namespace P3___Networked_Consumer
 {
     public partial class MainWindow : Window
     {
@@ -60,11 +60,20 @@ namespace VideoUploader
 
         private void AddVideoToGallery(string videoPath)
         {
+            string fileName = System.IO.Path.GetFileName(videoPath);
+
+            // Create a container for the video and filename
+            StackPanel videoStack = new StackPanel
+            {
+                Width = 200,
+                Margin = new Thickness(10),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+
             Grid videoContainer = new Grid
             {
                 Width = 200,
-                Height = 120,
-                Margin = new Thickness(10)
+                Height = 120
             };
 
             Image thumbnail = new Image
@@ -83,6 +92,17 @@ namespace VideoUploader
                 Visibility = Visibility.Collapsed // Hidden until hovered
             };
 
+            TextBlock fileNameText = new TextBlock
+            {
+                Text = fileName,
+                FontSize = 12,
+                Foreground = Brushes.Black, // Ensure visibility
+                TextWrapping = TextWrapping.Wrap, // Prevent text cutoff
+                TextAlignment = TextAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 5, 0, 0)
+            };
+
             videoContainer.Children.Add(thumbnail);
             videoContainer.Children.Add(videoPreview);
 
@@ -91,7 +111,21 @@ namespace VideoUploader
             {
                 thumbnail.Visibility = Visibility.Collapsed;
                 videoPreview.Visibility = Visibility.Visible;
+                videoPreview.Position = TimeSpan.Zero;
                 videoPreview.Play();
+
+                playbackTimer.Stop();
+                playbackTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(10)
+                };
+                playbackTimer.Tick += (sender, args) =>
+                {
+                    videoPreview.Stop();
+                    videoPreview.Visibility = Visibility.Collapsed;
+                    thumbnail.Visibility = Visibility.Visible;
+                    playbackTimer.Stop();
+                };
                 playbackTimer.Start();
             };
 
@@ -104,8 +138,14 @@ namespace VideoUploader
                 playbackTimer.Stop();
             };
 
-            VideoGallery.Children.Add(videoContainer);
+            // Add video container and filename to stack
+            videoStack.Children.Add(videoContainer);
+            videoStack.Children.Add(fileNameText);
+
+            // Add the stack to the gallery
+            VideoGallery.Children.Add(videoStack);
         }
+
 
         private void StopPlayback()
         {

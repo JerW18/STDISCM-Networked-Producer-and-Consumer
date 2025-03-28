@@ -1,4 +1,4 @@
-﻿<Window x:Class="VideoUploader.MainWindow"
+﻿<Window x:Class="P3___Networked_Consumer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Video Receiver" Height="600" Width="950"

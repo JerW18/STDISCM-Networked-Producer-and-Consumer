@@ -10,11 +10,16 @@ namespace P3___Networked_Producer.ViewModels
 {
     public partial class UploadViewModel : ObservableObject
     {
-        private readonly HashSet<string> videoPaths = new();
+        private ProgressPage? progressPage;
+
+        private readonly HashSet<string> videoPaths = [];
         private readonly HashSet<string> allowedExtensions = new(StringComparer.OrdinalIgnoreCase)
             { ".mp4", ".mkv", ".avi", ".mov", ".wmv" };
 
         public ObservableCollection<VideoFileItem> VideoFiles { get; } = [];
+
+        [ObservableProperty]
+        private int threadCount = 4;
 
         public UploadViewModel() {}
 
@@ -45,31 +50,24 @@ namespace P3___Networked_Producer.ViewModels
 
             foreach (string path in paths)
             {
-                if (File.Exists(path))
+                if (!File.Exists(path))
+                    continue;
+
+                string extension = Path.GetExtension(path);
+                if (allowedExtensions.Contains(extension))
                 {
-                    if (allowedExtensions.Contains(Path.GetExtension(path)))
+                    if (videoPaths.Add(path))
                     {
-                        if (videoPaths.Add(path))
-                        {
-                            acceptedVideos.Add(Path.GetFileName(path));
-                            VideoFiles.Add(new VideoFileItem { FilePath = path });
-                        }
-                    }
-                    else
-                    {
-                        rejectedVideos.Add(Path.GetFileName(path));
+                        acceptedVideos.Add(Path.GetFileName(path));
+                        VideoFiles.Add(new VideoFileItem { FilePath = path });
                     }
                 }
                 else
                 {
-                    rejectedVideos.Add(path);
+                    rejectedVideos.Add(Path.GetFileName(path));
                 }
             }
 
-            if (acceptedVideos.Count > 0)
-            {
-                MessageBox.Show($"{acceptedVideos.Count} video(s) added.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-            }
             if (rejectedVideos.Count > 0)
             {
                 MessageBox.Show($"Only video files are accepted!\nRejected files:\n{string.Join("\n", rejectedVideos)}",
@@ -90,7 +88,8 @@ namespace P3___Networked_Producer.ViewModels
         {
             if (Application.Current.MainWindow is MainWindow mainWindow)
             {
-                _ = mainWindow.MainFrame.Navigate(new ProgressPage());
+                 progressPage ??= new ProgressPage();
+        _ = mainWindow.MainFrame.Navigate(progressPage);
             }
             else
             {

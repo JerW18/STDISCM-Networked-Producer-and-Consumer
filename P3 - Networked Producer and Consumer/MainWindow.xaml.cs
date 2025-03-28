@@ -7,11 +7,14 @@ namespace P3___Networked_Producer
 {
     public partial class MainWindow : Window
     {
+        private readonly UploadPage? uploadPage;
+
         public MainWindow()
         {
             InitializeComponent();
 
-            MainFrame.Navigate(new UploadPage());
+            uploadPage ??= new UploadPage();
+            MainFrame.Navigate(uploadPage);
         }
     }
 }

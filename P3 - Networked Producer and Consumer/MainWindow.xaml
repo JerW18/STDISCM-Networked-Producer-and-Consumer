@@ -1,41 +1,9 @@
-﻿<Window x:Class="NetworkedConsumer.MainWindow"
+﻿<Window x:Class="P3___Networked_Producer.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Upload Videos" Height="500" Width="500"
+        Title="Upload Videos" Height="500" Width="800"
         Background="White" ResizeMode="NoResize"
         >
 
-    <Grid Margin="20">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
-
-            <!-- Title -->
-            <TextBlock Text="Upload folders containing videos" FontSize="18" FontWeight="Bold" 
-                Foreground="Black" TextAlignment="Center" Margin="0,0,0,10"/>
-
-            <!-- Drag and Drop Area -->
-            <Border BorderThickness="2" BorderBrush="LightGray" Background="White" 
-            Padding="20" CornerRadius="10" AllowDrop="True"
-            DragOver="Window_DragOver" Drop="Window_Drop">
-
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <!-- Upload Icon -->
-                    <Image Source="https://static-00.iconduck.com/assets.00/upload-icon-2048x2048-eu9n5hco.png" Width="40" Height="40" Margin="0,0,0,10"/>
-
-                    <!-- Drag & Drop Text -->
-                    <TextBlock Text="Drag and drop folders to upload"
-                        FontSize="14" FontWeight="Bold" Foreground="Black"
-                        HorizontalAlignment="Center" Margin="0,0,0,15"/>
-
-                    <!-- Folder List -->
-                    <ListBox Name="FolderListBox" Height="100" Width="300" Background="White" BorderBrush="Gray"/>
-                </StackPanel>
-            </Border>
-
-            <!-- Buttons (Upload) -->
-            <Button Name="UploadButton" Content="Upload" Width="150" Height="40"
-                Background="Black" Foreground="White" Click="UploadButton_Click" Margin="0,10,0,0"/>
-
-        </StackPanel>
-
-    </Grid>
+    <Frame Name="MainFrame" NavigationUIVisibility="Visible"/> 
 </Window>

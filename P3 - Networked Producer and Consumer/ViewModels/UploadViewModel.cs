@@ -1,10 +1,16 @@
 ﻿using System.Collections.ObjectModel;
 using System.IO;
+using System.Net.Sockets;
+using System.Net;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using P3___Networked_Producer.Models;
 using P3___Networked_Producer.Views;
+using System.Diagnostics;
+using System.Net.NetworkInformation;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace P3___Networked_Producer.ViewModels
 {
@@ -28,7 +34,7 @@ namespace P3___Networked_Producer.ViewModels
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
                 var paths = (string[])e.Data.GetData(DataFormats.FileDrop);
-                // Accept only if every path is a file with an allowed video extension.
+
                 return paths.All(path => File.Exists(path) && allowedExtensions.Contains(Path.GetExtension(path)));
             }
             return false;
@@ -77,19 +83,13 @@ namespace P3___Networked_Producer.ViewModels
 
         private bool CanUpload() => videoPaths.Count > 0;
 
-        [RelayCommand(CanExecute = nameof(CanUpload))]
-        private void UploadVideos()
-        {
-            MessageBox.Show($"Uploading {videoPaths.Count} video(s)...", "Upload", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-
         [RelayCommand]
         private void NavigateToProgress()
         {
             if (Application.Current.MainWindow is MainWindow mainWindow)
             {
-                 progressPage ??= new ProgressPage();
-        _ = mainWindow.MainFrame.Navigate(progressPage);
+                progressPage ??= new ProgressPage();
+                _ = mainWindow.MainFrame.Navigate(progressPage);
             }
             else
             {
@@ -105,6 +105,126 @@ namespace P3___Networked_Producer.ViewModels
                 videoPaths.Remove(video.FilePath);
                 VideoFiles.Remove(video);
                 UploadVideosCommand.NotifyCanExecuteChanged();
+            }
+        }
+
+        [RelayCommand(CanExecute = nameof(CanUpload))]
+
+        private void UploadVideos()
+        {
+            int port = 5001;
+            string localIP = GetLocalIPAddress();
+
+            TcpListener server = new(IPAddress.Any, port);
+            server.Start();
+
+            MessageBox.Show($"Server started on {localIP}:{port}.",
+                            "Server Started", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            List<Thread> threads = [];
+            for (int i = 0; i < ThreadCount; i++)
+            {
+                Thread thread = new(() => HandleClientConnections(server));
+                thread.Start();
+                threads.Add(thread);
+            }
+
+            // Wait for all threads to finish
+            foreach (var thread in threads)
+            {
+                thread.Join();
+            }
+
+            server.Stop();
+
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                videoPaths.Clear();
+                VideoFiles.Clear();
+            });
+
+            MessageBox.Show("Server stopped listening for clients.", 
+                            "Upload Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private static string GetLocalIPAddress()
+        {
+            foreach (NetworkInterface networkInterface in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (networkInterface.NetworkInterfaceType == NetworkInterfaceType.Wireless80211 && networkInterface.OperationalStatus == OperationalStatus.Up)
+                {
+                    foreach (UnicastIPAddressInformation ip in networkInterface.GetIPProperties().UnicastAddresses)
+                    {
+                        if (ip.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            return ip.Address.ToString();
+                        }
+                    }
+                }
+            }
+            return "null";
+        }
+
+        private void HandleClientConnections(TcpListener server)
+        {
+            try
+            {
+                TcpClient client = server.AcceptTcpClient();
+                SendVideosToClient(client);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error in client connection handler: {ex.Message}");
+            }
+        }
+
+        private void SendVideosToClient(TcpClient client)
+        {
+            try
+            {
+                using NetworkStream stream = client.GetStream();
+                using BinaryWriter writer = new(stream);
+                using BinaryReader reader = new(stream);
+
+                // Send the number of video files.
+                writer.Write(videoPaths.Count);
+                writer.Flush();
+
+                foreach (string path in videoPaths)
+                {
+                    // Get Filename
+                    string fileName = Path.GetFileName(path);
+                    byte[] fileNameBytes = System.Text.Encoding.UTF8.GetBytes(fileName);
+
+                    // Write Filename
+                    writer.Write(fileNameBytes.Length);
+                    writer.Write(fileNameBytes);
+
+                    // Hash Video File
+                    byte[] fileData = File.ReadAllBytes(path);
+                    byte[] hashBytes = SHA256.HashData(fileData);
+
+                    writer.Write(hashBytes.Length);
+                    writer.Write(hashBytes);
+                    writer.Flush();
+
+                    // 0 = already exists, 1 = send file
+                    int clientResponse = reader.ReadInt32();
+                    Trace.WriteLine(clientResponse);
+                    if (clientResponse == 0)
+                    {
+                        Trace.WriteLine($"Skipping {fileName}, already exists on client.");
+                        continue;
+                    }
+
+                    // Send the file if it does not exist on the client
+                    writer.Write(fileData.Length);
+                    stream.Write(fileData, 0, fileData.Length);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error sending videos to client: {ex.Message}");
             }
         }
     }

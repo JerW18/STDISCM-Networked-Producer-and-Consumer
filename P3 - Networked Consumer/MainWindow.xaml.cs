@@ -138,6 +138,18 @@ namespace P3___Networked_Consumer
                 playbackTimer.Stop();
             };
 
+            // Open video in full-screen when clicked
+            videoContainer.MouseLeftButtonUp += (s, e) =>
+            {
+                // Stop any ongoing preview
+                videoPreview.Stop();
+                playbackTimer.Stop();
+
+                // Instantiate and show the full-screen window
+                FullScreenWindow fsWindow = new FullScreenWindow(videoPath);
+                fsWindow.ShowDialog();
+            };
+
             // Add video container and filename to stack
             videoStack.Children.Add(videoContainer);
             videoStack.Children.Add(fileNameText);

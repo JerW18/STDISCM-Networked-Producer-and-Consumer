@@ -24,6 +24,8 @@ namespace P3___Networked_Producer.ViewModels
 
         public ObservableCollection<VideoFileItem> VideoFiles { get; } = [];
 
+        private static SemaphoreSlim acceptSemaphore;
+
         [ObservableProperty]
         private int threadCount = 4;
 
@@ -121,10 +123,27 @@ namespace P3___Networked_Producer.ViewModels
             MessageBox.Show($"Server started on {localIP}:{port}.",
                             "Server Started", MessageBoxButton.OK, MessageBoxImage.Information);
 
+            using TcpClient client = server.AcceptTcpClient();
+
+            using NetworkStream stream = client.GetStream();
+            using BinaryReader reader = new(stream);
+            int semaphoreCount = reader.ReadInt32();
+
+            acceptSemaphore = new(semaphoreCount, semaphoreCount);
+
             List<Thread> threads = [];
+            int videosPerThread = videoPaths.Count / ThreadCount;
+            int remainingVideos = videoPaths.Count % ThreadCount;
+            var videoPathList = videoPaths.ToList();
+            int startIndex = 0;
+
             for (int i = 0; i < ThreadCount; i++)
             {
-                Thread thread = new(() => HandleClientConnections(server));
+                int count = videosPerThread + (i < remainingVideos ? 1 : 0); // Distribute remaining videos
+                var videoSubset = videoPathList.GetRange(startIndex, count);
+                startIndex += count;
+
+                Thread thread = new(() => HandleClientConnections(server, videoSubset));
                 thread.Start();
                 threads.Add(thread);
             }
@@ -165,20 +184,31 @@ namespace P3___Networked_Producer.ViewModels
             return "null";
         }
 
-        private void HandleClientConnections(TcpListener server)
+        private static void HandleClientConnections(TcpListener server, List<string> videoSubset)
         {
-            try
+            bool isRunning = true;
+
+            while (isRunning)
             {
-                TcpClient client = server.AcceptTcpClient();
-                SendVideosToClient(client);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error in client connection handler: {ex.Message}");
+                acceptSemaphore.Wait();
+                try
+                {
+                    TcpClient client = server.AcceptTcpClient();
+                    SendVideosToClient(client, videoSubset);
+                    isRunning = false; 
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Error sending videos to client: {ex.Message}. Retrying...");
+                }
+                finally
+                {
+                    acceptSemaphore.Release();
+                }
             }
         }
 
-        private void SendVideosToClient(TcpClient client)
+        private static void SendVideosToClient(TcpClient client, List<string> videoSubset)
         {
             try
             {
@@ -187,10 +217,10 @@ namespace P3___Networked_Producer.ViewModels
                 using BinaryReader reader = new(stream);
 
                 // Send the number of video files.
-                writer.Write(videoPaths.Count);
+                writer.Write(videoSubset.Count);
                 writer.Flush();
 
-                foreach (string path in videoPaths)
+                foreach (string path in videoSubset)
                 {
                     // Get Filename
                     string fileName = Path.GetFileName(path);
@@ -210,7 +240,6 @@ namespace P3___Networked_Producer.ViewModels
 
                     // 0 = already exists, 1 = send file
                     int clientResponse = reader.ReadInt32();
-                    Trace.WriteLine(clientResponse);
                     if (clientResponse == 0)
                     {
                         Trace.WriteLine($"Skipping {fileName}, already exists on client.");

@@ -127,17 +127,26 @@ namespace P3___Networked_Producer.ViewModels
 
             using NetworkStream stream = client.GetStream();
             using BinaryReader reader = new(stream);
-            int semaphoreCount = reader.ReadInt32();
 
+            // Create number of semaphores based on client thread count
+            int semaphoreCount = reader.ReadInt32();
+            if (semaphoreCount > ThreadCount) semaphoreCount = ThreadCount;
             acceptSemaphore = new(semaphoreCount, semaphoreCount);
 
-            List<Thread> threads = [];
-            int videosPerThread = videoPaths.Count / ThreadCount;
-            int remainingVideos = videoPaths.Count % ThreadCount;
+            // Limit the number of threads to the number of videos if there are fewer videos than threads
+            int newThreadCount = 0;
+            if (videoPaths.Count < ThreadCount) newThreadCount = videoPaths.Count; 
+            else newThreadCount = ThreadCount;
+
+            // Distribute videos to threads
+            int videosPerThread = videoPaths.Count / newThreadCount;
+            int remainingVideos = videoPaths.Count % newThreadCount;
             var videoPathList = videoPaths.ToList();
             int startIndex = 0;
 
-            for (int i = 0; i < ThreadCount; i++)
+            // Create threads to send videos to client
+            List<Thread> threads = [];
+            for (int i = 0; i < newThreadCount; i++)
             {
                 int count = videosPerThread + (i < remainingVideos ? 1 : 0); // Distribute remaining videos
                 var videoSubset = videoPathList.GetRange(startIndex, count);

@@ -111,8 +111,7 @@ namespace P3___Networked_Producer.ViewModels
         }
 
         [RelayCommand(CanExecute = nameof(CanUpload))]
-
-        private void UploadVideos()
+        private async Task UploadVideosAsync()
         {
             int port = 5001;
             string localIP = GetLocalIPAddress();
@@ -123,56 +122,50 @@ namespace P3___Networked_Producer.ViewModels
             MessageBox.Show($"Server started on {localIP}:{port}.",
                             "Server Started", MessageBoxButton.OK, MessageBoxImage.Information);
 
-            using TcpClient client = server.AcceptTcpClient();
-
-            using NetworkStream stream = client.GetStream();
-            using BinaryReader reader = new(stream);
-
-            // Create number of semaphores based on client thread count
-            int semaphoreCount = reader.ReadInt32();
-            if (semaphoreCount > ThreadCount) semaphoreCount = ThreadCount;
-            acceptSemaphore = new(semaphoreCount, semaphoreCount);
-
-            // Limit the number of threads to the number of videos if there are fewer videos than threads
-            int newThreadCount = 0;
-            if (videoPaths.Count < ThreadCount) newThreadCount = videoPaths.Count; 
-            else newThreadCount = ThreadCount;
-
-            // Distribute videos to threads
-            int videosPerThread = videoPaths.Count / newThreadCount;
-            int remainingVideos = videoPaths.Count % newThreadCount;
-            var videoPathList = videoPaths.ToList();
-            int startIndex = 0;
-
-            // Create threads to send videos to client
-            List<Thread> threads = [];
-            for (int i = 0; i < newThreadCount; i++)
+            await Task.Run(() =>
             {
-                int count = videosPerThread + (i < remainingVideos ? 1 : 0); // Distribute remaining videos
-                var videoSubset = videoPathList.GetRange(startIndex, count);
-                startIndex += count;
+                using TcpClient client = server.AcceptTcpClient();
+                using NetworkStream stream = client.GetStream();
+                using BinaryReader reader = new(stream);
 
-                Thread thread = new(() => HandleClientConnections(server, videoSubset));
-                thread.Start();
-                threads.Add(thread);
-            }
+                int semaphoreCount = reader.ReadInt32();
+                if (semaphoreCount > ThreadCount) semaphoreCount = ThreadCount;
+                acceptSemaphore = new(semaphoreCount, semaphoreCount);
 
-            // Wait for all threads to finish
-            foreach (var thread in threads)
-            {
-                thread.Join();
-            }
+                int newThreadCount = Math.Min(ThreadCount, videoPaths.Count);
+                int videosPerThread = videoPaths.Count / newThreadCount;
+                int remainingVideos = videoPaths.Count % newThreadCount;
+                var videoPathList = videoPaths.ToList();
+                int startIndex = 0;
 
-            server.Stop();
+                List<Thread> threads = [];
+                for (int i = 0; i < newThreadCount; i++)
+                {
+                    int count = videosPerThread + (i < remainingVideos ? 1 : 0);
+                    var videoSubset = videoPathList.GetRange(startIndex, count);
+                    startIndex += count;
 
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                videoPaths.Clear();
-                VideoFiles.Clear();
+                    Thread thread = new(() => HandleClientConnections(server, videoSubset));
+                    thread.Start();
+                    threads.Add(thread);
+                }
+
+                foreach (var thread in threads)
+                {
+                    thread.Join();
+                }
+
+                server.Stop();
+
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    videoPaths.Clear();
+                    VideoFiles.Clear();
+                });
+
+                MessageBox.Show("Server stopped listening for clients.",
+                                "Upload Complete", MessageBoxButton.OK, MessageBoxImage.Information);
             });
-
-            MessageBox.Show("Server stopped listening for clients.", 
-                            "Upload Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private static string GetLocalIPAddress()

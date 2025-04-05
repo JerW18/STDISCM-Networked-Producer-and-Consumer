@@ -15,6 +15,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using P3___Networked_Consumer;
 using System.Numerics;
+using static P3___Networked_Consumer.ConsumerQueue;
 
 namespace P3___Networked_Consumer
 {
@@ -132,9 +133,6 @@ namespace P3___Networked_Consumer
                 playbackTimer.Stop();
             };
 
-<<<<<<< Updated upstream
-            // Add video container and filename to stack
-=======
             videoContainer.MouseLeftButtonUp += (s, e) =>
             {
                 var player = new MediaElement
@@ -175,7 +173,6 @@ namespace P3___Networked_Consumer
                 Margin = new Thickness(0, 5, 0, 0)
             };
 
->>>>>>> Stashed changes
             videoStack.Children.Add(videoContainer);
             videoStack.Children.Add(fileNameText);
             VideoGallery.Children.Add(videoStack);
@@ -274,12 +271,13 @@ namespace P3___Networked_Consumer
                             File.WriteAllBytes(savePath, item.FileData);
                             saved = true;
 
+
+                            //Thread.Sleep(10000); //test queue
                             Dispatcher.Invoke(() =>
                             {
                                 AddVideoToGallery(savePath);
-                                //Thread.Sleep(10000); //test queue
-                                Logger.Log($"[Consumer] downloaded + displayed: {item.FileName}");
                             });
+                            Logger.Log($"[Consumer] downloaded + displayed: {item.FileName}");
                         }
                         catch (Exception ex)
                         {
@@ -321,24 +319,29 @@ namespace P3___Networked_Consumer
                     int hashLen = reader.ReadInt32();
                     byte[] hash = reader.ReadBytes(hashLen);
 
+                    // Only check first
                     if (ConsumerQueue.IsDuplicate(hash))
                     {
-                        Logger.Log($"[Server] Duplicate detected: {fileName}");
-                        writer.Write(0); // reject
+                        Logger.Log($"[Server] Rejected (duplicate): {fileName}");
+                        writer.Write(0); // Duplicate
                         continue;
                     }
 
-                    writer.Write(1); // accept
+                    if (!ConsumerQueue.GetSlot())
+                    {
+                        Logger.Log($"[Server] Rejected (queue full): {fileName}");
+                        writer.Write(2); 
+                        continue;
+                    }
+
+                    writer.Write(1);
 
                     int fileSize = reader.ReadInt32();
                     byte[] fileData = reader.ReadBytes(fileSize);
 
-                    bool enqueued = ConsumerQueue.TryEnqueue(fileName, fileData, hash);
-                    Logger.Log(enqueued
-                        ? $"[Server] Enqueued: {fileName}"
-                        : $"[Server] Failed to enqueue: {fileName}");
+                    ConsumerQueue.FinishEnqueue(fileName, fileData, hash); 
+                    Logger.Log($"[Server] Enqueued: {fileName}");
                 }
-
             }
             catch (Exception ex)
             {
@@ -349,6 +352,9 @@ namespace P3___Networked_Consumer
                 client.Close();
             }
         }
+
+
+
 
         public void LogToUI(string message)
         {

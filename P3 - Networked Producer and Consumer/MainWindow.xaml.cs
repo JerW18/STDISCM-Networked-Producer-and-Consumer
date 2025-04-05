@@ -15,6 +15,8 @@ namespace P3___Networked_Producer
 
             uploadPage ??= new UploadPage();
             MainFrame.Navigate(uploadPage);
+
+
         }
     }
 }

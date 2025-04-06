@@ -90,7 +90,7 @@ namespace P3___Networked_Consumer
 
             Image thumbnail = new Image
             {
-                Source = new BitmapImage(new Uri("https://www.iconpacks.net/icons/1/free-video-icon-833-thumb.png")),
+                Source = new BitmapImage(new Uri("/Assets/video-thumbnail.png", UriKind.Relative)),
                 Stretch = Stretch.Uniform
             };
 
@@ -352,9 +352,6 @@ namespace P3___Networked_Consumer
                 client.Close();
             }
         }
-
-
-
 
         public void LogToUI(string message)
         {

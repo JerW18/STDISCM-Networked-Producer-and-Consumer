@@ -91,7 +91,6 @@ namespace P3___Networked_Producer.ViewModels
             }
         }
 
-        //private bool CanUpload() => videoPaths.Count > 0 && !isUploading;
         private bool CanUpload()
         {
             if (isUploading || videoPaths.Count == 0)
@@ -167,72 +166,6 @@ namespace P3___Networked_Producer.ViewModels
                 return false;
             }
         }
-
-
-        /*private void UploadVideo(List<string> videoSubset)
-        {
-            try
-            {
-                using TcpClient client = new();
-                Logger.Log($"[Producer] Connecting to consumer at: {ConsumerIP}:5001");
-                client.Connect(ConsumerIP, 5001);
-                using NetworkStream stream = client.GetStream();
-                using BinaryWriter writer = new(stream);
-                using BinaryReader reader = new(stream);
-
-                writer.Write(videoSubset.Count);
-
-                List<string> retryList = new();
-
-                foreach (var path in videoSubset)
-                {
-
-                    string compressedPath;
-                    try
-                    {
-                        compressedPath = CompressVideo(path);
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log($"[Producer] Compression failed for {Path.GetFileName(path)}: {ex.Message}");
-                        continue; 
-                    }
-
-                    //string fileName = Path.GetFileName(path);
-                    string fileName = Path.GetFileName(compressedPath);
-                    byte[] fileNameBytes = Encoding.UTF8.GetBytes(fileName);
-                    writer.Write(fileNameBytes.Length);
-                    writer.Write(fileNameBytes);
-
-                    byte[] fileData = File.ReadAllBytes(compressedPath);
-                    byte[] hashBytes = SHA256.HashData(fileData);
-
-                    writer.Write(hashBytes.Length);
-                    writer.Write(hashBytes);
-
-                    int serverResponse = reader.ReadInt32();
-                    if (serverResponse == 0)
-                    {
-                        Logger.Log($"[Server] Skipped (duplicate): {fileName}");
-                        continue;
-                    }
-                    else if (serverResponse == 2)
-                    {
-                        Logger.Log($"[Server] Rejected: {fileName} — Queue full.");
-                        continue;
-                    }
-
-                    writer.Write(fileData.Length);
-                    stream.Write(fileData, 0, fileData.Length);
-
-                    Logger.Log($"[Producer] Uploaded: {fileName}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[Producer] Upload error: {ex.Message}");
-            }
-        }*/
 
         private void UploadVideo(List<string> videoSubset)
         {
@@ -314,7 +247,7 @@ namespace P3___Networked_Producer.ViewModels
             string compressedFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Compressed");
             Directory.CreateDirectory(compressedFolder);
             string filenameNoExt = Path.GetFileNameWithoutExtension(inputPath);
-            string compressedPath = Path.Combine(compressedFolder, $"{filenameNoExt}_compressed.mp4");
+            string compressedPath = Path.Combine(compressedFolder, $"{filenameNoExt}_{GetCRFName()}_compression.mp4");
 
             string ffmpegPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ffmpeg.exe");
             int crf = GetCRF();
@@ -353,60 +286,6 @@ namespace P3___Networked_Producer.ViewModels
             return compressedPath;
         }
 
-        /*
-        private async Task<string> CompressVideoAsync(string inputPath)
-        {
-            string outputDir = Path.GetDirectoryName(inputPath)!;
-            string baseFile = Path.GetFileNameWithoutExtension(inputPath);
-            string outputPath = Path.Combine(outputDir, $"{baseFile}_compressed.mp4");
-
-            int crf = GetCRF();
-
-            if (crf == -1) 
-            {
-                Logger.Log($"[Producer] Skipped compression: {baseFile} (No Compression selected)");
-                return inputPath;
-            }
-
-            Logger.Log($"[DEBUG] FFmpeg path: {FFmpeg.ExecutablesPath}");
-
-            try
-            {
-                var versionTest = await FFmpeg.Conversions.New()
-                    .AddParameter("-version")
-                    .Start();
-
-                Logger.Log("[Producer] FFmpeg is working correctly.");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[Producer] FFmpeg test failed: {ex.Message}");
-            }
-            try
-            {
-                FFmpeg.SetExecutablesPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory));
-
-                var conversion = FFmpeg.Conversions.New()
-                    .AddParameter($"-i \"{inputPath}\"")
-                    .AddParameter("-vcodec libx264")
-                    .AddParameter($"-crf {crf}")
-                    .SetOutput(outputPath)
-                    .SetOverwriteOutput(true);
-
-                await conversion.Start();
-
-                Logger.Log($"[Producer] Compression successful: {baseFile}");
-                return outputPath;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log($"[Producer] Compression failed for {baseFile}: {ex.Message}");
-                return inputPath;
-            }
-        }
-
-        */
-
         public int GetCRF()
         {
             return compressionIndex switch
@@ -418,6 +297,18 @@ namespace P3___Networked_Producer.ViewModels
             };
         }
 
+        public string GetCRFName()
+        {
+            return compressionIndex switch
+            {
+                0 => "low",
+                1 => "medium",
+                2 => "high",
+                _ => "null"
+            };
+        }
+
+
         [RelayCommand]
         private void DeleteVideo(VideoFileItem video)
         {
@@ -428,11 +319,5 @@ namespace P3___Networked_Producer.ViewModels
                 UploadVideosCommand.NotifyCanExecuteChanged();
             }
         }
-
-        /*[RelayCommand]
-        private void NavigateToProgress()
-        {
-        }*/
-
     }
 }

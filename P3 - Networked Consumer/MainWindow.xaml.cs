@@ -286,7 +286,7 @@ namespace P3___Networked_Consumer
                         
                         if(!saved)
                         {
-                            P3___Networked_Consumer.ConsumerQueue.Requeue(item);
+                            P3___Networked_Consumer.ConsumerQueue.TryRequeue(item);
                             Thread.Sleep(1000);
                         }
                     }

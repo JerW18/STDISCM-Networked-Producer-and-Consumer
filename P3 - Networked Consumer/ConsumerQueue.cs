@@ -41,40 +41,6 @@ namespace P3___Networked_Consumer
             }
         }
 
-        /*public static EnqueueStatus TryEnqueue(string fileName, byte[]fileData, byte[] hash)
-        {
-            string hashString = Convert.ToHexString(hash);
-
-            if (IsDuplicate(hash))
-            {
-                return EnqueueStatus.Duplicate;
-            }
-
-            //queueLock.WaitOne(); //block producer if full
-            if (!queueLock.WaitOne(0)) 
-            {
-                Logger.Log($"[Queue] Queue is full. Rejecting {fileName}");
-                return EnqueueStatus.Full;
-            }
-
-            uploadQueue.Enqueue(new VideoFileItem
-            {
-                FileName = fileName,
-                FileData = fileData,
-                Hash = hashString
-            });
-
-            //Logger.Log($"[Queue] Enqueued: {fileName} (Hash: {hashString}) — Queue size: {uploadQueue.Count}");
-            Logger.Log($"[Queue] Enqueued: {fileName} — Queue size: {uploadQueue.Count}");
-
-            lock (videoHashes)
-            {
-                videoHashes.Add(hashString);
-            }
-
-            return EnqueueStatus.Success;
-        }*/
-
         public static EnqueueStatus TryEnqueue(string fileName, byte[] fileData, byte[] hash)
         {
             string hashString = Convert.ToHexString(hash);
@@ -138,10 +104,31 @@ namespace P3___Networked_Consumer
             return success;
         }
 
-        public static void Requeue(VideoFileItem item)
+        public static bool TryRequeue(VideoFileItem item)
         {
-            uploadQueue.Enqueue(item);
-            Logger.Log($"[Queue] Requeued: {item.FileName} — Queue size: {uploadQueue.Count}");
+            bool acquiredSemaphore = false;
+            try
+            {
+                if (!queueLock.WaitOne(0))
+                {
+                    Logger.Log($"[Queue] Failed to Requeue (FULL): {item.FileName}");
+                    return false;
+                }
+                acquiredSemaphore = true;
+
+                uploadQueue.Enqueue(item);
+                Logger.Log($"[Queue] Requeued: {item.FileName} — Queue size: {uploadQueue.Count}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[Queue] EXCEPTION during Requeue for {item.FileName}: {ex}");
+                if (acquiredSemaphore)
+                {
+                    queueLock.Release();
+                }
+                return false; 
+            }
         }
 
         public static int CurrentQueueCount => uploadQueue.Count;

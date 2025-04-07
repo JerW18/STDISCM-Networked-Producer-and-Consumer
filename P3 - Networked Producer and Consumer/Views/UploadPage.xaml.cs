@@ -16,6 +16,8 @@ namespace P3___Networked_Producer.Views
             InitializeComponent();
             viewModel = new UploadViewModel();
             DataContext = viewModel;
+
+            Logger.LogAction = LogToUI;
         }
 
         // Handle Drag Over
@@ -29,6 +31,14 @@ namespace P3___Networked_Producer.Views
         private void Window_Drop(object sender, DragEventArgs e)
         {
             viewModel.HandleFileDrop(e);
+        }
+        private void LogToUI(string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                ProducerLog.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
+                ProducerLog.ScrollToEnd();
+            });
         }
     }
 }

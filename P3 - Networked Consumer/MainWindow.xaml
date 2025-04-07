@@ -4,17 +4,77 @@
         Title="Video Receiver" Height="600" Width="950"
         Background="White">
 
-	<Grid>
-		<!-- Upload Button -->
-		<DockPanel LastChildFill="True">
-			<Button Content="Upload Videos" Height="40" DockPanel.Dock="Top"
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="1.25*" />
+        </Grid.ColumnDefinitions>
+        <DockPanel LastChildFill="True">
+			<!--<Button Content="Upload Videos" Height="40" DockPanel.Dock="Top"
                     Click="UploadButton_Click" Background="Red" Foreground="White"
-                    FontWeight="Bold" Margin="10"/>
+                    FontWeight="Bold" Margin="10"/> -->
 
 			<!-- Video Gallery -->
-			<ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="10">
+
+                <TextBlock Text="Consumer Threads:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBox Name="cInput" Width="40" Text="2" Margin="0,0,20,0"/>
+
+                <TextBlock Text="Queue Size:" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBox Name="qInput" Width="40" Text="10"/>
+
+                <Button Content="Start Server" Name="startBtn" Click="ClickStart"
+                    Background="SkyBlue" Foreground="White" Margin="10,0,0,0" Padding="8,2"
+                    FontWeight="Bold">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Background" Value="SkyBlue"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="Padding" Value="8,2"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="DarkGray"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <!-- 👈 fix text color -->
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </StackPanel>
+
+            <TextBlock Name="IpAddressText"
+               DockPanel.Dock="Bottom"
+               HorizontalAlignment="Right"
+               Margin="10"
+               FontStyle="Italic"
+               Foreground="Gray"
+               FontSize="12"/>
+            
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
 				<WrapPanel Name="VideoGallery" Margin="10"/>
 			</ScrollViewer>
-		</DockPanel>
-	</Grid>
+        </DockPanel>
+        <Grid Grid.Column="1" Background="#EEEEEE">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="   Server Log"
+               FontSize="16"
+               Margin="0,0,0,5"/>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <TextBox Name="ServerLog"
+                 IsReadOnly="True"
+                 TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto"
+                 AcceptsReturn="True"
+                 FontFamily="Consolas"
+                 Background="#EEEEEE"/>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
 </Window>

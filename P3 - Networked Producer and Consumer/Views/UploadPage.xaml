@@ -11,15 +11,24 @@
       Background="White"
       Title="Upload Page">
 
-    <Grid Margin="20">
-        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="400">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="1.25*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="485" Grid.Column="0">
 
             <!-- Number of Threads Input -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,10">
-                <TextBlock Text="Number of Threads: " VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <TextBlock Text="Number of Producer Threads: " VerticalAlignment="Center" Margin="0,0,5,0"/>
                 <TextBox Width="50" Text="{Binding ThreadCount, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
                  VerticalAlignment="Center" HorizontalContentAlignment="Center"/>
+                <TextBlock Text="Consumer IP:" VerticalAlignment="Center" Margin="10,0,5,0"/>
+                <TextBox Name="ConsumerIP" Text="{Binding ConsumerIP, UpdateSourceTrigger=PropertyChanged, Mode=TwoWay}" 
+                         Width="150" Margin="0,0,10,0"/>
             </StackPanel>
+            
+            
 
             <!-- Title -->
             <TextBlock Text="Upload videos (.mp4, .mkv, .avi, .mov, .wmv)" 
@@ -48,7 +57,7 @@
                                Margin="0,0,0,15"/>
 
                     <!-- Video List -->
-                    <ListBox ItemsSource="{Binding VideoFiles}" 
+                    <ListBox ItemsSource="{Binding FoldersToUpload}" 
                              Height="100" Width="300" 
                              Background="White" 
                              BorderBrush="Gray">
@@ -69,16 +78,42 @@
                                     <!-- Delete Button on the right -->
                                     <Button Content="⨉" 
                                             Background="Transparent"
-                                            Command="{Binding DataContext.DeleteVideoCommand, RelativeSource={RelativeSource AncestorType=Page}}"
+                                            Command="{Binding DataContext.DeleteFolderCommand, RelativeSource={RelativeSource AncestorType=Page}}"
                                             CommandParameter="{Binding}" 
                                             Margin="5"
-                                            Grid.Column="1"/>             
+                                            Grid.Column="1">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Foreground" Value="Black"/>
+                                                <Setter Property="IsEnabled" Value="True"/>
+                                                <Setter Property="ToolTip" Value="Delete this file"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding DataContext.IsUploading, RelativeSource={RelativeSource AncestorType=Page}}" Value="True">
+                                                        <Setter Property="IsEnabled" Value="False"/>
+                                                        <Setter Property="Foreground" Value="Gray"/>
+                                                        <Setter Property="ToolTip" Value="Cannot delete while uploading."/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
                 </StackPanel>
             </Border>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                <TextBlock Text="Compression Quality: " VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ComboBox Width="200"
+              SelectedIndex="{Binding compressionIndex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                    <ComboBoxItem Content="Low (High Quality)" />
+                    <ComboBoxItem Content="Medium (Balanced)" />
+                    <ComboBoxItem Content="High (Small File)" />
+                    <ComboBoxItem Content="None" />
+                </ComboBox>
+            </StackPanel>
 
             <!-- Buttons (Using MVVM Command Binding) -->
             <Button Content="Upload" 
@@ -88,13 +123,34 @@
                     Command="{Binding UploadVideosCommand}"
                     Margin="0,10,0,0"/>
 
-            <Button Content="See Upload Progress" 
+            <!--<Button Content="See Upload Progress" 
                     Width="150" Height="40"
                     Background="Black" 
                     Foreground="White" 
                     Command="{Binding NavigateToProgressCommand}" 
-                    Margin="0,10,0,0"/>
+                    Margin="0,10,0,0"/>-->
 
+            
         </StackPanel>
+        <Grid Grid.Column="1" Background="#EEEEEE">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="   Producer Log"
+                       FontSize="16"
+                       Margin="0,0,0,5"/>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <TextBox Name="ProducerLog"
+                         IsReadOnly="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"
+                         AcceptsReturn="True"
+                         FontFamily="Consolas"
+                         Background="#EEEEEE"/>
+            </ScrollViewer>
+        </Grid>
     </Grid>
 </Page>

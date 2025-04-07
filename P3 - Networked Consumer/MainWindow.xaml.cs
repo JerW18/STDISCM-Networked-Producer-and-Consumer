@@ -1,20 +1,13 @@
-﻿using Microsoft.Win32;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
-using P3___Networked_Consumer;
-using System.Numerics;
 using static P3___Networked_Consumer.ConsumerQueue;
 
 namespace P3___Networked_Consumer
@@ -43,16 +36,6 @@ namespace P3___Networked_Consumer
 
             DownloadConsumer();
         }
-
-        /*private void LogToUI(string message)
-        {
-            Logger.Log(message);
-            Dispatcher.Invoke(() =>
-            {
-                ServerLog.AppendText($"{message}\n");
-                ServerLog.ScrollToEnd();
-            });
-        }*/
 
         private string GetLocalIPAddress()
         {

@@ -1,9 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.IO.Enumeration;
-using System.Security.Cryptography;
-using System.Security.Policy;
-using System.Threading;
 using P3___Networked_Consumer.Models;
 
 namespace P3___Networked_Consumer

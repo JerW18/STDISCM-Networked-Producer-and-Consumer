@@ -1,19 +1,13 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
-using System.Net;
+using System.Security.Cryptography;
+using System.Text;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using P3___Networked_Producer.Models;
-using P3___Networked_Producer.Views;
-using System.Diagnostics;
-using System.Net.NetworkInformation;
-using System.Security.Cryptography;
-using System.Text;
-using System.Windows.Threading;
-using Xabe.FFmpeg;
-using System.Runtime.Intrinsics.X86;
 
 namespace P3___Networked_Producer.ViewModels
 {
@@ -238,8 +232,6 @@ namespace P3___Networked_Producer.ViewModels
             }
         }
 
-
-
         private string CompressVideo(string inputPath)
         {
             //string directory = Path.GetDirectoryName(inputPath)!;
@@ -307,7 +299,6 @@ namespace P3___Networked_Producer.ViewModels
                 _ => "null"
             };
         }
-
 
         [RelayCommand]
         private void DeleteVideo(VideoFileItem video)

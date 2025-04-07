@@ -1,8 +1,5 @@
-﻿using System.Globalization;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Media;
 using P3___Networked_Producer.ViewModels;
 
 namespace P3___Networked_Producer.Views
@@ -35,8 +32,6 @@ namespace P3___Networked_Producer.Views
         {
             viewModel.HandleFileDrop(e);
         }
-
-
         private void LogToUI(string message)
         {
             Dispatcher.Invoke(() =>

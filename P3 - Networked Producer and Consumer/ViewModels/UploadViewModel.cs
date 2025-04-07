@@ -13,11 +13,11 @@ namespace P3___Networked_Producer.ViewModels
 {
     public partial class UploadViewModel : ObservableObject
     {
-        private readonly HashSet<string> videoPaths = [];
+        private readonly HashSet<string> folderPaths = [];
         private readonly HashSet<string> allowedExtensions = new(StringComparer.OrdinalIgnoreCase)
             { ".mp4", ".mkv", ".avi", ".mov", ".wmv" };
 
-        public ObservableCollection<VideoFileItem> VideoFiles { get; } = [];
+        public ObservableCollection<FolderItem> FoldersToUpload { get; } = [];
 
         [ObservableProperty]
         private int threadCount = 4;
@@ -37,7 +37,8 @@ namespace P3___Networked_Producer.ViewModels
             if (e.Data.GetDataPresent(System.Windows.DataFormats.FileDrop))
             {
                 var paths = (string[])e.Data.GetData(System.Windows.DataFormats.FileDrop);
-                return paths.All(path => File.Exists(path) && allowedExtensions.Contains(Path.GetExtension(path)));
+                if (paths == null || paths.Length == 0) return false;
+                return paths.All(path => Directory.Exists(path));
             }
             return false;
         }
@@ -54,40 +55,68 @@ namespace P3___Networked_Producer.ViewModels
 
         public void HandleDrop(string[] paths)
         {
-            var acceptedVideos = new List<string>();
-            var rejectedVideos = new List<string>();
+            var acceptedFoldersForMessage = new List<string>();
+            var rejectedFoldersForMessage = new List<string>();
+            var duplicateFolders = new List<string>();
 
             foreach (string path in paths)
             {
-                if (!File.Exists(path))
-                    continue;
-
-                string extension = Path.GetExtension(path);
-                if (allowedExtensions.Contains(extension))
+                if (Directory.Exists(path))
                 {
-                    if (videoPaths.Add(path))
+                    if (IsValidVideoFolder(path))
                     {
-                        acceptedVideos.Add(Path.GetFileName(path));
-                        VideoFiles.Add(new VideoFileItem { FilePath = path });
+                        if (folderPaths.Add(path))
+                        {
+                            acceptedFoldersForMessage.Add(Path.GetFileName(path));
+                            FoldersToUpload.Add(new FolderItem { FolderPath = path });
+                        }
+                        else
+                        {
+                            duplicateFolders.Add(Path.GetFileName(path));
+                        }
                     }
-                }
-                else
-                {
-                    rejectedVideos.Add(Path.GetFileName(path));
+                    else
+                    {
+                        rejectedFoldersForMessage.Add(Path.GetFileName(path));
+                    }
                 }
             }
 
-            if (rejectedVideos.Count > 0)
+            if (rejectedFoldersForMessage.Count > 0)
             {
-                System.Windows.MessageBox.Show(
-                    $"Only video files are accepted!\nRejected files:\n{string.Join("\n", rejectedVideos)}",
-                    "Invalid Files", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                MessageBox.Show($"Only folders that are empty or contain exclusively supported video files ({string.Join(", ", allowedExtensions)}) are accepted.\n\nRejected folders (contain other file types or folders):\n{string.Join("\n", rejectedFoldersForMessage)}",
+                                "Invalid Folder Content", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private bool IsValidVideoFolder(string directoryPath)
+        {
+            if (Directory.EnumerateDirectories(directoryPath).Any())
+            {
+                return false;
+            }
+
+            try
+            {
+                var files = Directory.EnumerateFiles(directoryPath, "*.*", SearchOption.AllDirectories);
+
+                bool allAreVideos = files.All(file => allowedExtensions.Contains(Path.GetExtension(file)));
+                return allAreVideos;
+
+            }
+            catch (UnauthorizedAccessException uaEx)
+            {
+                return false;
+            }
+            catch (Exception ex)
+            {
+                return false;
             }
         }
 
         private bool CanUpload()
         {
-            if (isUploading || videoPaths.Count == 0)
+            if (isUploading || folderPaths.Count == 0)
                 return false;
 
             // IP format check
@@ -113,8 +142,8 @@ namespace P3___Networked_Producer.ViewModels
             isUploading = true;
             UploadVideosCommand.NotifyCanExecuteChanged();
 
-            var videoList = videoPaths.ToList();
-            int total = videoList.Count;
+            var folderList = folderPaths.ToList();
+            int total = folderList.Count;
             int perThread = total / ThreadCount;
             int remainder = total % ThreadCount;
 
@@ -124,10 +153,12 @@ namespace P3___Networked_Producer.ViewModels
             for (int i = 0; i < ThreadCount; i++)
             {
                 int count = perThread + (i < remainder ? 1 : 0);
-                var subset = videoList.GetRange(startIndex, count);
+                var subset = folderList.GetRange(startIndex, count);
                 startIndex += count;
 
-                Thread thread = new(() => UploadVideo(subset));
+                var videoList = getVideoList(subset);
+
+                Thread thread = new(() => UploadVideo(videoList));
                 thread.Start();
                 threads.Add(thread);
             }
@@ -139,11 +170,34 @@ namespace P3___Networked_Producer.ViewModels
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
-                videoPaths.Clear();
-                VideoFiles.Clear();
+                folderPaths.Clear();
+                FoldersToUpload.Clear();
             });
 
             Logger.Log("[Producer] Upload complete.");
+        }
+
+        private List<string> getVideoList(List<string> folderPaths)
+        {
+            var videoList = new List<string>();
+            try
+            {
+                foreach (string folderPath in folderPaths)
+                {
+                    var files = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.AllDirectories)
+                        .Where(file => allowedExtensions.Contains(Path.GetExtension(file)));
+                    videoList.AddRange(files);
+                }
+            }
+            catch (UnauthorizedAccessException uaEx)
+            {
+                Logger.Log($"[Producer] Access denied: {uaEx.Message}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log($"[Producer] Error: {ex.Message}");
+            }
+            return videoList;
         }
 
         private bool CheckOnline(string ip, int port)
@@ -301,12 +355,12 @@ namespace P3___Networked_Producer.ViewModels
         }
 
         [RelayCommand]
-        private void DeleteVideo(VideoFileItem video)
+        private void DeleteFolder(FolderItem? folder)
         {
-            if (video != null && !isUploading)
+            if (folder != null && !isUploading)
             {
-                videoPaths.Remove(video.FilePath);
-                VideoFiles.Remove(video);
+                folderPaths.Remove(folder.FolderPath);
+                FoldersToUpload.Remove(folder);
                 UploadVideosCommand.NotifyCanExecuteChanged();
             }
         }

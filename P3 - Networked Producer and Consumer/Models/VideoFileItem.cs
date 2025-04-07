@@ -2,9 +2,9 @@
 
 namespace P3___Networked_Producer.Models
 {
-    public class VideoFileItem
+    public class FolderItem
     {
-        public required string FilePath { get; set; }
-        public string DisplayName => "🎞 " + Path.GetFileName(FilePath);
+        public required string FolderPath { get; set; }
+        public string DisplayName => "📂 " + Path.GetFileName(FolderPath);
     }
 }

@@ -13,7 +13,7 @@ A producer-consumer exercise simulating a distributed media upload service.
 3. Configure the project to have multiple startup projects. See [link](https://learn.microsoft.com/en-us/visualstudio/ide/how-to-set-multiple-startup-projects?view=vs-2022) for guide.
 4. Set Action to **Start** and Debug Target to the respective project.
 5. Run the project by clicking **Release → Start**.
-6. Before you start using the program, download the `ffmpeg.exe` file in the **prerequisites** folder found in the project root folder. Afterwards, place this `ffmpeg.exe` file in the `\P3 - Networked Producer and Consumer\bin\Release\net8.0-windows` directory.
+6. Before you start using the program, download the `ffmpeg.exe` file in the `prerequisites` folder found in the project root folder. Afterwards, place this `ffmpeg.exe` file in the `\P3 - Networked Producer and Consumer\bin\Release\net8.0-windows` directory.
 7. Rerun the porject and start using the program.
 
 ### Running app in different machine

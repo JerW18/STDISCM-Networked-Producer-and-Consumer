@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -155,7 +155,7 @@ namespace P3___Networked_Consumer
                 HorizontalAlignment = HorizontalAlignment.Center,
                 Margin = new Thickness(0, 5, 0, 0)
             };
-
+            
             videoStack.Children.Add(videoContainer);
             videoStack.Children.Add(fileNameText);
             VideoGallery.Children.Add(videoStack);

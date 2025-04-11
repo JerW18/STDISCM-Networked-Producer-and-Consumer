@@ -1,10 +1,11 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -123,26 +124,166 @@ namespace P3___Networked_Consumer
                     Source = new Uri(videoPath),
                     LoadedBehavior = MediaState.Manual,
                     UnloadedBehavior = MediaState.Manual,
-                    Stretch = Stretch.Uniform
+                    Stretch = Stretch.Uniform,
+                    Volume = 0.5
                 };
+
+                var playButton = new Button { Content = "▶", Width = 50, Margin = new Thickness(5, 0, 0, 0) };
+                var pauseButton = new Button { Content = "❚❚", Width = 50, Margin = new Thickness(5, 0, 0, 0) };
+                var stopButton = new Button { Content = "■", Width = 50, Margin = new Thickness(5, 0, 0, 0) };
+
+                var volumeLabel = new TextBlock { Text = "Vol:", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 0, 0), Foreground = Brushes.White };
+                var volumeSlider = new Slider
+                {
+                    Width = 70,
+                    Minimum = 0,
+                    Maximum = 1,
+                    Value = player.Volume,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                var timeLabel = new TextBlock { Text = "00:00 / 00:00", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(10, 0, 5, 0), Foreground = Brushes.White };
+                var timelineSlider = new Slider
+                {
+                    MinWidth = 150,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    IsEnabled = false 
+                };
+
+                var controlsPanel = new StackPanel
+                {
+                    Orientation = Orientation.Horizontal,
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Background = new SolidColorBrush(Color.FromArgb(180, 0, 0, 0)),
+                    Height = 40
+                };
+                controlsPanel.Children.Add(playButton);
+                controlsPanel.Children.Add(pauseButton);
+                controlsPanel.Children.Add(stopButton);
+                controlsPanel.Children.Add(volumeLabel);
+                controlsPanel.Children.Add(volumeSlider);
+                controlsPanel.Children.Add(timeLabel);
+                controlsPanel.Children.Add(timelineSlider);
+
+                var mainGrid = new Grid();
+                mainGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                mainGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto }); 
+                                                                                            
+
+                Grid.SetRow(player, 0);
+                mainGrid.Children.Add(player);
+
+                Grid.SetRow(controlsPanel, 1);
+                mainGrid.Children.Add(controlsPanel);
 
                 Window playerWindow = new Window
                 {
                     Width = 800,
                     Height = 450,
                     Title = fileName,
-                    Content = player
+                    WindowStyle = WindowStyle.SingleBorderWindow, 
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen,
+                    Content = mainGrid 
                 };
 
-                player.Loaded += (_, __) => player.Play();
+                DispatcherTimer timer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(200)
+                };
+                bool isDragging = false; 
 
-                playerWindow.Closed += (_, __) =>
+                player.MediaOpened += (sender, args) =>
+                {
+                    if (player.NaturalDuration.HasTimeSpan)
+                    {
+                        var totalDuration = player.NaturalDuration.TimeSpan;
+                        timelineSlider.Maximum = totalDuration.TotalSeconds;
+                        timeLabel.Text = $"00:00 / {totalDuration:mm\\:ss}"; 
+                        timelineSlider.IsEnabled = true; 
+                        timer.Start(); 
+                    }
+                    player.Play();
+                };
+
+                player.MediaEnded += (sender, args) =>
                 {
                     player.Stop();
-                    player.Close(); 
+                    timelineSlider.Value = 0; 
+                    timer.Stop(); 
                 };
 
-                playerWindow.ShowDialog();
+                player.MediaFailed += (sender, args) =>
+                {
+                    MessageBox.Show($"Media failed to load or play: {args.ErrorException.Message}", "Media Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    timer.Stop();
+                    timelineSlider.IsEnabled = false;
+                };
+
+                timer.Tick += (sender, args) =>
+                {
+                    if (!isDragging && player.NaturalDuration.HasTimeSpan) 
+                    {
+                        timelineSlider.Value = player.Position.TotalSeconds;
+                        timeLabel.Text = $"{player.Position:mm\\:ss} / {player.NaturalDuration.TimeSpan:mm\\:ss}";
+                    }
+                    else if (player.NaturalDuration.HasTimeSpan)
+                    {
+                        timeLabel.Text = $"{TimeSpan.FromSeconds(timelineSlider.Value):mm\\:ss} / {player.NaturalDuration.TimeSpan:mm\\:ss}";
+                    }
+                };
+
+                playButton.Click += (sender, args) =>
+                {
+                    player.Play();
+                    if (player.NaturalDuration.HasTimeSpan) timer.Start(); 
+                };
+                pauseButton.Click += (sender, args) =>
+                {
+                    player.Pause();
+                    timer.Stop(); 
+                };
+                stopButton.Click += (sender, args) =>
+                {
+                    player.Stop(); 
+                    timelineSlider.Value = 0; 
+                    timer.Stop(); 
+                    if (player.NaturalDuration.HasTimeSpan) 
+                        timeLabel.Text = $"00:00 / {player.NaturalDuration.TimeSpan:mm\\:ss}";
+                    else
+                        timeLabel.Text = "00:00 / 00:00"; 
+                };
+
+                volumeSlider.ValueChanged += (sender, args) =>
+                {
+                    player.Volume = volumeSlider.Value;
+                };
+
+                timelineSlider.AddHandler(Thumb.DragStartedEvent, new DragStartedEventHandler((sender, args) =>
+                {
+                    isDragging = true;
+                    if(player.CanPause) player.Pause();
+                    timer.Stop();
+                }));
+
+                timelineSlider.AddHandler(Thumb.DragCompletedEvent, new DragCompletedEventHandler((sender, args) =>
+                {
+                    isDragging = false;
+                    player.Position = TimeSpan.FromSeconds(timelineSlider.Value);
+                    player.Play();
+                    timer.Start();
+                }));
+
+                playerWindow.Closed += (sender, args) =>
+                {
+                    timer?.Stop();
+                    player.Stop();
+                    player.Close();
+                };
+
+                playerWindow.ShowDialog(); 
+
+                timer?.Stop();
             };
 
             TextBlock fileNameText = new TextBlock
